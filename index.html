@@ -56,7 +56,7 @@
             border: 1px solid #333;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
             max-width: 90%;
-            width: 480px;
+            width: 520px;
             display: none;
             animation: fadeIn 0.3s ease;
         }
@@ -85,7 +85,7 @@
         button.primary { border-color: #3b82f6; color: #3b82f6; }
 
         .upgrade-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-        .upgrade-card { border: 1px solid #333; padding: 15px; cursor: pointer; border-radius: 6px; text-align: left; transition: transform 0.1s; }
+        .upgrade-card { border: 1px solid #333; padding: 15px; cursor: pointer; border-radius: 6px; text-align: left; transition: transform 0.1s; position: relative; overflow: hidden; }
         .upgrade-card:hover { border-color: #777; transform: translateX(5px); }
 
         .type-atk { border-left: 4px solid #ec4899; }
@@ -96,7 +96,7 @@
         .upgrade-name { font-weight: bold; font-size: 1rem; display: block; }
         .upgrade-category { font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
         .upgrade-effect { color: #ccc; font-size: 0.85rem; display: block; margin-top: 4px;}
-        .upgrade-downside { color: #ef4444; font-size: 0.8rem; font-style: italic; margin-top: 4px;}
+        .upgrade-level { position: absolute; top: 10px; right: 10px; font-size: 0.6rem; color: #3b82f6; font-weight: bold; }
 
         #hud {
             position: absolute;
@@ -139,6 +139,29 @@
             text-shadow: 0 0 10px #a855f7;
         }
 
+        #swarmWarning {
+            position: fixed;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            color: #ef4444;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            display: none;
+            pointer-events: none;
+            z-index: 30;
+            text-shadow: 0 0 20px #ef4444;
+            animation: pulseWarning 1s infinite;
+        }
+
+        @keyframes pulseWarning {
+            0% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.3; transform: scale(1); }
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -150,11 +173,13 @@
     <canvas id="gameCanvas"></canvas>
     <div id="xpBarContainer"><div id="xpBar"></div></div>
     <div id="timerOverlay">final stand: <span id="standTimer">120</span>s</div>
+    <div id="swarmWarning">swarm incoming</div>
 
     <div id="hud">
         <div class="stat-row" style="color: #ef4444">hp: <span id="hpVal">100</span>/<span id="maxHpVal">100</span></div>
         <div class="stat-row" style="color: #eab308">lvl: <span id="lvlVal">1</span>/30</div>
         <div class="stat-row" style="color: #3b82f6">wave: <span id="waveVal">1</span></div>
+        <div id="luckDisplay" class="stat-row" style="color: #eab308;">luck: +<span id="luckVal">0</span>%</div>
     </div>
 
     <div id="uiLayer">
@@ -168,20 +193,20 @@
         <div id="classScreen" class="screen">
             <h2>select soul</h2>
             <div class="upgrade-grid" id="classOptions">
-                <div class="upgrade-card type-atk" onclick="Game.startGame('ravager')">
-                    <span class="upgrade-category">atk (ravager)</span>
+                <div class="upgrade-card type-atk" onclick="Game.startGame('phantom')">
+                    <span class="upgrade-category">phantom</span>
                     <span class="upgrade-name">lethal strikes</span>
-                    <span class="upgrade-effect">massive damage, but fragile body.</span>
+                    <span class="upgrade-effect">massive damage, but fragile body. base luck: 0%.</span>
                 </div>
-                <div class="upgrade-card type-rng" onclick="Game.startGame('heavenly')">
-                    <span class="upgrade-category">rng (heavenly)</span>
+                <div class="upgrade-card type-rng" onclick="Game.startGame('angelic')">
+                    <span class="upgrade-category">angelic</span>
                     <span class="upgrade-name">divine speed</span>
-                    <span class="upgrade-effect">constant regeneration, +12.5% speed.</span>
+                    <span class="upgrade-effect">regen, +12.5% speed, +15% fire rate. every kill grants +0.5% luck.</span>
                 </div>
                 <div class="upgrade-card type-def" onclick="Game.startGame('demonic')">
-                    <span class="upgrade-category">def (demonic)</span>
+                    <span class="upgrade-category">demonic</span>
                     <span class="upgrade-name">plated armor</span>
-                    <span class="upgrade-effect">bulky armor and high base survival.</span>
+                    <span class="upgrade-effect">bulky armor and high base survival. base luck: -10%.</span>
                 </div>
             </div>
         </div>
@@ -203,7 +228,7 @@
 const CONFIG = {
     basePlayerSpeed: 3.2,
     baseEnemySpeed: 1.6,
-    waveDuration: 400, // Reduced from 600 to make it faster to reach bosses
+    waveDuration: 400,
     maxLevel: 30,
     colors: {
         player: '#3b82f6',
@@ -215,42 +240,111 @@ const CONFIG = {
         rng: '#eab308',
         boss: '#a855f7',
         minion: '#60a5fa',
-        mirror: '#ffffff'
+        mirror: '#ffffff',
+        indicator: 'rgba(239, 68, 68, 0.4)'
     }
 };
 
 const UPGRADES_DB = {
     atk: [
-        { name: 'frostbite', id: 'frostbite', desc: 'bullets slow by 15%. stacking 3 freezes enemy.', downside: '-5% bullet speed', apply: (p) => { p.frost = (p.frost || 0) + 1; p.bulletSpeed *= 0.95; } },
-        { name: 'orbital rammers', id: 'minions', desc: 'summon a small rammer that attacks enemies', downside: '-10% player damage', apply: (p) => { p.minions.push(new Minion(p.x, p.y)); p.damage *= 0.9; } },
-        { name: 'volatile core', id: 'explode', desc: 'enemies explode on death (15% chance)', downside: '-10% defense', apply: (p) => { p.onKillEffects.push('explode'); p.defense -= 2; } }
+        { 
+            id: 'swift_firing', 
+            name: 'swift firing', 
+            getDesc: (lv) => lv === 1 ? "faster fire rate, -2 def, -3% dmg." : lv === 2 ? "even faster, -3 def, -6% dmg." : "max rate, -5 def, -10% dmg.",
+            apply: (p, lv) => { 
+                p.fireRate = Math.max(4, p.fireRate - 4); 
+                p.defense -= (lv === 1 ? 2 : (lv === 2 ? 1 : 2));
+                p.damage *= 0.97;
+            } 
+        },
+        { 
+            id: 'frostbite', 
+            name: 'frostbite', 
+            getDesc: (lv) => lv === 3 ? "frozen status: enemies stop completely." : `slows enemies. power: ${lv}`,
+            apply: (p, lv) => { p.frost = lv; } 
+        },
+        { 
+            id: 'minions', 
+            name: 'orbital rammers', 
+            getDesc: (lv) => `summons ${lv} orbital rammer${lv>1?'s':''} that orbit you.`,
+            apply: (p, lv) => { p.minionCount = lv; } 
+        },
+        { 
+            id: 'static_field', 
+            name: 'static field', 
+            getDesc: (lv) => `shocks nearby enemies on fire. ${lv * 15}% trigger chance.`,
+            apply: (p, lv) => { p.shockChance = lv * 0.15; } 
+        }
     ],
     rng: [
-        { name: 'adrenaline surge', id: 'adrenaline', desc: '70% chance on kill: +70% fire rate for 3s', downside: '-10% movement speed', apply: (p) => { p.onKillEffects.push('adrenaline'); p.speed *= 0.9; } },
-        { name: 'risky reload', id: 'risky', desc: '30% chance on kill: -15% damage, +100% multishot', downside: 'fragile fire rate', apply: (p) => { p.onKillEffects.push('risky'); p.multishot += 1; } },
-        { name: 'vampiric sigil', id: 'vampire', desc: '10% chance on kill to restore 5% max HP', downside: '-10% regeneration rate', apply: (p) => { p.onKillEffects.push('vampire'); p.regen *= 0.9; } }
+        { 
+            id: 'adrenaline', 
+            name: 'adrenaline', 
+            getDesc: (lv) => `kills boost fire rate for ${lv * 2}s. 15% chance.`,
+            apply: (p, lv) => { p.adrenalineChance = 0.15; p.adrenalineLv = lv; } 
+        },
+        { 
+            id: 'multishot', 
+            name: 'risky reload', 
+            getDesc: (lv) => `fire ${lv + 1} bullets per shot. 20% chance.`,
+            apply: (p, lv) => { p.multishotChance = 0.20; p.multishot = lv; } 
+        },
+        { 
+            id: 'singularity', 
+            name: 'singularity', 
+            getDesc: (lv) => `bullets have ${lv * 12}% chance to pull enemies toward impact.`,
+            apply: (p, lv) => { p.pullChance = lv * 0.12; } 
+        },
+        { 
+            id: 'chain', 
+            name: 'chain lightning', 
+            getDesc: (lv) => `bullets jump to ${lv} targets. 40% chance.`,
+            apply: (p, lv) => { p.chainChance = 0.40; p.chainCount = lv; } 
+        }
     ],
     def: [
-        { name: 'spirit katana', id: 'katana', desc: 'automatically deflect/reflect enemy bullets', downside: '-10% max hp', apply: (p) => { p.katana = true; p.maxHp *= 0.9; } },
-        { name: 'shield chain', id: 'orbitals', desc: 'rotating orbit of projectiles (stacks 3x)', downside: '-5% movement speed', apply: (p) => { p.orbitals = Math.min(3, (p.orbitals || 0) + 1); p.speed *= 0.95; } },
-        { name: 'plated skin', id: 'plate', desc: '+5 flat defense', downside: '-15% fire rate', apply: (p) => { p.defense += 5; p.fireRate *= 1.15; } },
-        { name: 'regeneration core', id: 'regen', desc: '+3 hp/sec regen', downside: '-5% speed', apply: (p) => { p.regen += 3; p.speed *= 0.95; } }
+        { 
+            id: 'katana', 
+            name: 'spirit katana', 
+            getDesc: (lv) => lv === 1 ? "reflect enemy bullets in a small zone." : lv === 2 ? "wider reflection zone." : "3x damage on reflected bullets.",
+            apply: (p, lv) => { 
+                p.katana = lv; 
+                p.katanaRange = 45 + (lv * 15);
+            } 
+        },
+        { 
+            id: 'regen', 
+            name: 'regeneration core', 
+            getDesc: (lv) => `restores ${lv * 1.5} hp every second.`,
+            apply: (p, lv) => { p.regen = lv * 1.5; } 
+        },
+        { 
+            id: 'phase_shift', 
+            name: 'phase shift', 
+            getDesc: (lv) => `become invincible for ${lv * 0.5}s after taking damage.`,
+            apply: (p, lv) => { p.phaseTime = lv * 30; } 
+        },
+        { 
+            id: 'thorns', 
+            name: 'barbed skin', 
+            getDesc: (lv) => `melee attackers take ${lv * 5} damage.`,
+            apply: (p, lv) => { p.thorns = lv * 5; } 
+        }
     ],
     ethereal: {
-        ravager: [
-            { id: 'void_reaper', name: 'void reaper', desc: 'kills grant permanent +0.1% damage.', downside: 'hp cannot exceed 40', apply: (p) => { p.onKillEffects.push('void'); p.maxHp = 40; p.hp = Math.min(p.hp, 40); } },
-            { id: 'unstable_blink', name: 'unstable blink', desc: 'dash periodically dealing 1000% damage.', downside: 'lose 1 hp per dash', apply: (p) => { p.onKillEffects.push('blink'); } },
-            { id: 'soul_harvest', name: 'soul harvest', desc: 'double all soul (xp) gains.', downside: '-30% defense', apply: (p) => { p.xpMult = 2; p.defense -= 10; } }
+        phantom: [
+            { id: 'void_reaper', name: 'void reaper', desc: 'kills grant +0.1% damage. hp capped at 40.', apply: (p) => { p.voidReaper = true; p.maxHp = 40; p.hp = Math.min(p.hp, 40); } },
+            { id: 'unstable_blink', name: 'unstable blink', desc: 'auto-dash dealing huge damage at cost of 1hp.', apply: (p) => { p.blink = true; } }
         ],
-        heavenly: [
-            { id: 'heavenly_ascension', name: 'heavenly ascension', desc: 'on death: survive 2m with 500% stats.', downside: 'guaranteed death after timer', apply: (p) => { p.hasAscension = true; } },
-            { id: 'seraphim_wings', name: 'seraphim wings', desc: '+100% speed, fly over enemies.', downside: '-50% max hp', apply: (p) => { p.speed *= 2; p.maxHp *= 0.5; p.hp = Math.min(p.hp, p.maxHp); } },
-            { id: 'divine_halo', name: 'divine halo', desc: 'enemies near you take constant tick damage.', downside: '-20% damage', apply: (p) => { p.halo = true; p.damage *= 0.8; } }
+        angelic: [
+            { id: 'angel_ascension', name: 'angelic ascension', desc: 'survive 2m with 500% stats after death.', apply: (p) => { p.hasAscension = true; } },
+            { id: 'divine_halo', name: 'divine halo', desc: 'enemies near you take massive ticking damage (10/sec).', apply: (p) => { p.halo = true; } },
+            { id: 'fortune_blessing', name: 'blessing of luck', desc: 'double luck triggers. rng upgrades appear 50% more often.', apply: (p) => { p.luckFactor = (p.luckFactor || 1) * 2; p.rngBias = true; } }
         ],
         demonic: [
-            { id: 'infernal_fortress', name: 'infernal fortress', desc: '+50 flat defense, immune to projectiles.', downside: '-50% speed', apply: (p) => { p.defense += 50; p.bulletImmune = true; p.speed *= 0.5; } },
-            { id: 'hellfire_trail', name: 'hellfire trail', desc: 'leave fire that deals 50% damage/sec.', downside: 'bullets move slower', apply: (p) => { p.fireTrail = true; p.bulletSpeed *= 0.7; } },
-            { id: 'abyssal_hunger', name: 'abyssal hunger', desc: 'damage increases by 1% for every 1% hp missing.', downside: 'no regeneration', apply: (p) => { p.hunger = true; p.regen = 0; } }
+            { id: 'infernal_fortress', name: 'infernal fortress', desc: '+50 defense, immune to bullets. -50% speed.', apply: (p) => { p.defense += 50; p.bulletImmune = true; p.speed *= 0.5; } },
+            { id: 'abyssal_hunger', name: 'abyssal hunger', desc: 'damage scales with missing hp. no regen.', apply: (p) => { p.hunger = true; p.regen = 0; } },
+            { id: 'singularity_eth', name: 'dark singularity', desc: 'demonic bullets pull souls with 25% extra chance.', apply: (p) => { p.pullChance = (p.pullChance || 0) + 0.25; } }
         ]
     }
 };
@@ -261,7 +355,8 @@ class GameEngine {
         this.ctx = this.canvas.getContext('2d');
         this.resize();
         this.state = 'MENU';
-        this.entities = { player: null, enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [] };
+        this.entities = { player: null, enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [], minions: [] };
+        this.spawnIndicators = [];
         this.wave = 1; this.frame = 0;
         this.bossActive = false;
         this.keys = {}; this.mouse = { x: 0, y: 0, down: false };
@@ -289,7 +384,8 @@ class GameEngine {
         this.showScreen('hud');
         document.getElementById('hud').style.display = 'block';
         document.getElementById('xpBarContainer').style.display = 'block';
-        this.entities.player = new Player(this.canvas.width/2, this.canvas.height/2, archetype);
+        this.entities = { player: new Player(this.canvas.width/2, this.canvas.height/2, archetype), enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [], minions: [] };
+        this.spawnIndicators = [];
         this.wave = 1; this.frame = 0; this.bossActive = false;
         document.getElementById('waveVal').innerText = this.wave;
     }
@@ -299,9 +395,7 @@ class GameEngine {
         if (id !== 'hud') {
             document.getElementById(id).classList.add('active');
             document.getElementById('uiLayer').style.pointerEvents = 'auto';
-        } else {
-            document.getElementById('uiLayer').style.pointerEvents = 'none';
-        }
+        } else { document.getElementById('uiLayer').style.pointerEvents = 'none'; }
     }
 
     handleTouchStart(e) {
@@ -325,96 +419,72 @@ class GameEngine {
         }
     }
 
-    handleTouchEnd(e) { 
-        for (let t of e.changedTouches) if (t.identifier === this.joystick.id) this.joystick.active = false; 
+    handleTouchEnd(e) { for (let t of e.changedTouches) if (t.identifier === this.joystick.id) this.joystick.active = false; }
+
+    planSpawn(lvOverride = null) {
+        let x, y;
+        if (Math.random() < 0.5) { x = Math.random() < 0.5 ? 20 : this.canvas.width - 20; y = Math.random() * this.canvas.height; }
+        else { x = Math.random() * this.canvas.width; y = Math.random() < 0.5 ? 20 : this.canvas.height - 20; }
+        const lv = lvOverride !== null ? lvOverride : Math.max(1, Math.floor(this.frame / 1200) + 1);
+        
+        this.spawnIndicators.push({ x, y, lv, timer: 60 });
     }
 
-    spawnEnemy() {
-        let x, y;
-        if (Math.random() < 0.5) {
-            x = Math.random() < 0.5 ? -40 : this.canvas.width + 40;
-            y = Math.random() * this.canvas.height;
-        } else {
-            x = Math.random() * this.canvas.width;
-            y = Math.random() < 0.5 ? -40 : this.canvas.height + 40;
-        }
-        const level = Math.floor(this.frame / 1200) + 1;
-        this.entities.enemies.push(new Neal(x, y, level));
+    spawnEnemy(x, y, lv) {
+        this.entities.enemies.push(new Neal(x, y, lv));
     }
 
     spawnBoss() {
         if (this.bossActive) return;
-        
-        let x = Math.random() < 0.5 ? -100 : this.canvas.width + 100;
-        let y = Math.random() * this.canvas.height;
-        
-        if (this.wave === 30) {
-            this.entities.enemies.push(new MirrorBoss(x, y, this.entities.player));
-            this.spawnFloatingText(this.canvas.width/2, 50, "mirror of neal", CONFIG.colors.mirror);
-        } else {
-            this.entities.enemies.push(new Boss(x, y, this.wave));
-            this.spawnFloatingText(this.canvas.width/2, 50, "wave " + this.wave + " boss", CONFIG.colors.boss);
-        }
+        let x = Math.random() < 0.5 ? 100 : this.canvas.width - 100, y = Math.random() * this.canvas.height;
+        if (this.wave === 30) this.entities.enemies.push(new MirrorBoss(x, y, this.entities.player));
+        else this.entities.enemies.push(new Boss(x, y, this.wave));
         this.bossActive = true;
     }
 
     spawnAltar(isEthereal = false, x = null, y = null) {
-        const p = 80;
-        const spawnX = x !== null ? x : p + Math.random() * (this.canvas.width - p*2);
-        const spawnY = y !== null ? y : p + Math.random() * (this.canvas.height - p*2);
-        
-        this.entities.altars.push({ 
-            x: spawnX, 
-            y: spawnY, 
-            r: isEthereal ? 18 : 12,
-            isEthereal: isEthereal
-        });
+        const spawnX = x !== null ? x : 80 + Math.random() * (this.canvas.width - 160);
+        const spawnY = y !== null ? y : 80 + Math.random() * (this.canvas.height - 160);
+        this.entities.altars.push({ x: spawnX, y: spawnY, r: isEthereal ? 18 : 12, isEthereal });
     }
 
     presentUpgrades(isLevelUp = false, isEthereal = false) {
         this.state = 'PAUSED';
         const container = document.getElementById('upgradeOptions');
         container.innerHTML = '';
-        
         const p = this.entities.player;
-        const title = isEthereal ? "ethereal evolution" : (isLevelUp ? "soul evolution" : "altar activated");
-        document.getElementById('upgradeTitle').innerText = title;
-        document.getElementById('upgradeTitle').style.color = isEthereal ? CONFIG.colors.ethereal : (isLevelUp ? CONFIG.colors.xp : CONFIG.colors.altar);
         
         if (isEthereal) {
-            const archetypeList = UPGRADES_DB.ethereal[p.archetype].filter(u => !p.chosenUpgrades.has(u.id));
-            archetypeList.forEach((u) => {
+            const list = UPGRADES_DB.ethereal[p.archetype].filter(u => !p.etherealUpgrades.has(u.id));
+            list.forEach(u => {
                 const el = document.createElement('div');
-                el.className = `upgrade-card type-ethereal`;
-                el.innerHTML = `
-                    <span class="upgrade-category">ethereal evolution</span>
-                    <span class="upgrade-name">${u.name}</span>
-                    <span class="upgrade-effect">${u.desc}</span>
-                    <div class="upgrade-downside">${u.downside}</div>
-                `;
-                el.onclick = () => { 
-                    u.apply(p); 
-                    p.chosenUpgrades.add(u.id);
-                    this.resumeGame(true); 
-                };
+                el.className = 'upgrade-card type-ethereal';
+                el.innerHTML = `<span class="upgrade-category">ethereal</span><span class="upgrade-name">${u.name}</span><span class="upgrade-effect">${u.desc}</span>`;
+                el.onclick = () => { u.apply(p); p.etherealUpgrades.add(u.id); this.resumeGame(true); };
                 container.appendChild(el);
             });
-            if (archetypeList.length === 0) this.resumeGame(true);
+            if (list.length === 0) this.resumeGame(true);
         } else {
-            const categories = ['atk', 'rng', 'def'];
-            categories.forEach(cat => {
-                const list = UPGRADES_DB[cat];
-                const u = list[Math.floor(Math.random() * list.length)];
-                const el = document.createElement('div');
-                el.className = `upgrade-card type-${cat}`;
-                el.innerHTML = `
-                    <span class="upgrade-category">${cat}</span>
-                    <span class="upgrade-name">${u.name}</span>
-                    <span class="upgrade-effect">${u.desc}</span>
-                    <div class="upgrade-downside">${u.downside}</div>
-                `;
-                el.onclick = () => { u.apply(p); this.resumeGame(!isLevelUp); };
-                container.appendChild(el);
+            let cats = ['atk', 'rng', 'def'];
+            cats.forEach(cat => {
+                let pool = UPGRADES_DB[cat].filter(u => (p.upgrades[u.id] || 0) < 3);
+                if (pool.length > 0) {
+                    const u = pool[Math.floor(Math.random() * pool.length)];
+                    const lv = (p.upgrades[u.id] || 0) + 1;
+                    const el = document.createElement('div');
+                    el.className = `upgrade-card type-${cat}`;
+                    el.innerHTML = `<span class="upgrade-level">tier ${lv}</span><span class="upgrade-category">${cat}</span><span class="upgrade-name">${u.name}</span><span class="upgrade-effect">${u.getDesc(lv)}</span>`;
+                    el.onclick = () => { 
+                        p.upgrades[u.id] = lv; 
+                        u.apply(p, lv); 
+                        if (u.id === 'minions') {
+                            this.entities.minions = [];
+                            for(let i=0; i<lv; i++) this.entities.minions.push(new Minion(p, i));
+                        }
+                        this.resumeGame(!isLevelUp); 
+                    };
+                    container.appendChild(el);
+                }
             });
         }
         this.showScreen('upgradeScreen');
@@ -424,7 +494,7 @@ class GameEngine {
         if (fromAltar) {
             const p = this.entities.player;
             let idx = -1, minD = Infinity;
-            this.entities.altars.forEach((a, i) => { const d = Math.hypot(p.x - a.x, p.y - a.y); if(d < minD) { minD = d; idx = i; } });
+            this.entities.altars.forEach((a, i) => { const d = Math.hypot(p.x-a.x, p.y-a.y); if(d<minD) { minD=d; idx=i; } });
             if(idx !== -1) this.entities.altars.splice(idx, 1);
         }
         this.state = 'PLAYING'; this.showScreen('hud');
@@ -437,117 +507,115 @@ class GameEngine {
         this.frame++;
         const p = this.entities.player;
 
-        // Enemy spawn frequency
-        if (this.frame % Math.max(15, 60 - this.wave*2) === 0) this.spawnEnemy();
+        const spawnRate = Math.max(15, 60 - this.wave * 1.5);
+        if (this.frame % spawnRate === 0) this.planSpawn();
         
-        // Wave management
-        if (this.frame % CONFIG.waveDuration === 0) {
-            if (this.wave < 30) {
-                this.wave++;
-                document.getElementById('waveVal').innerText = this.wave;
-                
-                // Trigger boss exactly on these waves
-                if (this.wave === 10 || this.wave === 20 || this.wave === 30) {
-                    this.spawnBoss();
-                } else if (!this.bossActive) {
-                    // Regular wave: spawn altar
-                    this.spawnAltar(false);
-                }
-            } else if (this.wave === 30 && !this.bossActive && !this.entities.enemies.some(e => e.isBoss)) {
-                // If boss was killed but we are still at 30, it's endgame
+        // Swarm logic (random swarms every now and then)
+        if (this.frame % 1200 === 0 && Math.random() > 0.6) {
+            const warning = document.getElementById('swarmWarning');
+            warning.style.display = 'block';
+            setTimeout(() => warning.style.display = 'none', 3000);
+            for(let i=0; i<8; i++) setTimeout(() => this.planSpawn(), i * 200);
+        }
+
+        // Process Spawn Indicators
+        for (let i = this.spawnIndicators.length - 1; i >= 0; i--) {
+            const ind = this.spawnIndicators[i];
+            ind.timer--;
+            if (ind.timer <= 0) {
+                this.spawnEnemy(ind.x, ind.y, ind.lv);
+                this.spawnIndicators.splice(i, 1);
             }
+        }
+
+        if (this.frame % CONFIG.waveDuration === 0 && this.wave < 30) {
+            this.wave++;
+            document.getElementById('waveVal').innerText = this.wave;
+            if (this.wave % 10 === 0) this.spawnBoss();
+            else if (!this.bossActive) this.spawnAltar(false);
         }
 
         p.update(this);
 
+        // Bullets (Player's)
         for (let i = this.entities.bullets.length - 1; i >= 0; i--) {
             const b = this.entities.bullets[i];
             b.x += b.vx; b.y += b.vy; b.life--;
             if (b.life <= 0) this.entities.bullets.splice(i, 1);
         }
 
+        // Enemy Bullets (Reflectable)
         for (let i = this.entities.enemyBullets.length - 1; i >= 0; i--) {
             const b = this.entities.enemyBullets[i];
             b.x += b.vx; b.y += b.vy; b.life--;
-            if (p.katana && Math.hypot(p.x - b.x, p.y - b.y) < 55) {
-                b.vx *= -1.5; b.vy *= -1.5; b.damage *= 1.5;
-                this.entities.bullets.push(b);
-                this.entities.enemyBullets.splice(i, 1);
-                continue;
+            
+            // Spirit Katana Reflection Logic
+            if (p.katana) {
+                const dist = Math.hypot(p.x - b.x, p.y - b.y);
+                if (dist < p.katanaRange) {
+                    this.entities.particles.push({ x: b.x, y: b.y, vx: 0, vy: 0, life: 0.5, color: '#22c55e' });
+                    b.vx *= -1.5; b.vy *= -1.5; 
+                    if (p.katana === 3) b.damage *= 3;
+                    this.entities.bullets.push(b);
+                    this.entities.enemyBullets.splice(i, 1);
+                    continue;
+                }
             }
+            
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.r + b.r) { 
-                if (!p.bulletImmune) p.takeDamage(b.damage); 
+                if (!p.bulletImmune && p.phaseTimer <= 0) p.takeDamage(b.damage); 
                 this.entities.enemyBullets.splice(i, 1); 
-            }
-            else if (b.life <= 0) this.entities.enemyBullets.splice(i, 1);
+            } else if (b.life <= 0) this.entities.enemyBullets.splice(i, 1);
         }
 
-        p.minions.forEach(m => m.update(this, p));
-
+        // Enemies
         for (let i = this.entities.enemies.length - 1; i >= 0; i--) {
             const e = this.entities.enemies[i];
             e.update(this, p);
-
-            if (p.halo && Math.hypot(p.x - e.x, p.y - e.y) < 120) e.hp -= 0.5;
             
+            if (p.halo && Math.hypot(p.x - e.x, p.y - e.y) < 120) e.hp -= 0.16;
+
             for (let j = this.entities.bullets.length - 1; j >= 0; j--) {
                 const b = this.entities.bullets[j];
                 if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + b.r) {
                     e.takeDamage(b.damage, this);
-                    if(p.frost) {
-                        e.frostStacks = (e.frostStacks || 0) + 1;
-                        if(e.frostStacks >= 3) { e.frozen = 60; e.frostStacks = 0; }
-                        else { e.speed *= (1 - (0.05 * p.frost)); }
+                    if (p.pullChance && Math.random() < p.pullChance * (1 + p.luck/100)) { 
+                        if (Math.hypot(e.x - p.x, e.y - p.y) > 65) {
+                            const pullA = Math.atan2(b.y - e.y, b.x - e.x);
+                            e.x += Math.cos(pullA) * 20; e.y += Math.sin(pullA) * 20;
+                        }
                     }
                     this.entities.bullets.splice(j, 1);
                     break;
                 }
             }
 
-            if (p.orbitals) {
-                const angle = this.frame * 0.05;
-                for (let k = 0; k < p.orbitals; k++) {
-                    const ox = p.x + Math.cos(angle + (k * Math.PI * 2 / 3)) * 65;
-                    const oy = p.y + Math.sin(angle + (k * Math.PI * 2 / 3)) * 65;
-                    if (Math.hypot(e.x - ox, e.y - oy) < e.r + 5) e.takeDamage(2, this);
-                }
+            if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) {
+                p.takeDamage(e.damage);
+                if (p.thorns) e.takeDamage(p.thorns, this);
             }
 
-            if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) p.takeDamage(e.damage);
-
             if (e.hp <= 0) {
-                const killX = e.x;
-                const killY = e.y;
-                if (e.isBoss) {
-                    this.bossActive = false;
-                    p.gainXp(500 * (this.wave/10), this, killX, killY);
-                    // Guaranteed Ethereal Altar on boss kill
-                    this.spawnAltar(true, killX, killY);
-                    
-                    if (this.wave === 30) {
-                        setTimeout(() => {
-                            document.getElementById('endStatus').innerText = "victorious.";
-                            document.getElementById('endStatus').style.color = CONFIG.colors.altar;
-                            this.gameOver();
-                        }, 2500);
-                    }
-                } else {
-                    p.gainXp(15 * e.level, this, killX, killY);
-                }
+                const xpGain = e.isBoss ? 1000 : 15;
+                p.gainXp(xpGain, this, e.x, e.y);
+                this.spawnFloatingText(e.x, e.y, `+${xpGain}xp`, CONFIG.colors.xp);
+                if (e.isBoss) { this.bossActive = false; this.spawnAltar(true, e.x, e.y); if(this.wave === 30) this.gameOver(true); }
                 this.entities.enemies.splice(i, 1);
             }
         }
 
+        this.entities.minions.forEach(m => m.update(this, p));
         for (const a of this.entities.altars) if (Math.hypot(p.x - a.x, p.y - a.y) < p.r + a.r) this.presentUpgrades(false, a.isEthereal);
-
         this.entities.particles = this.entities.particles.filter(pt => (pt.life -= 0.04) > 0);
-        this.entities.particles.forEach(pt => { pt.x += pt.vx; pt.y += pt.vy; });
-        this.entities.texts = this.entities.texts.filter(t => (t.life -= 0.02) > 0);
-        this.entities.texts.forEach(t => t.y += t.dy);
+        this.entities.texts = this.entities.texts.filter(t => {
+            t.y += t.dy;
+            return (t.life -= 0.02) > 0;
+        });
         
         document.getElementById('hpVal').innerText = Math.ceil(p.hp);
         document.getElementById('maxHpVal').innerText = Math.ceil(p.maxHp);
         document.getElementById('lvlVal').innerText = p.level;
+        document.getElementById('luckVal').innerText = p.luck.toFixed(1);
     }
 
     draw() {
@@ -555,115 +623,109 @@ class GameEngine {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         if (this.state === 'MENU') return;
 
+        // Draw Spawn Indicators
+        for (const ind of this.spawnIndicators) {
+            this.ctx.beginPath();
+            this.ctx.arc(ind.x, ind.y, 15 * (ind.timer / 60), 0, Math.PI * 2);
+            this.ctx.strokeStyle = CONFIG.colors.indicator;
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.arc(ind.x, ind.y, 2, 0, Math.PI * 2);
+            this.ctx.fillStyle = CONFIG.colors.indicator;
+            this.ctx.fill();
+        }
+
         this.ctx.shadowBlur = 10;
+        const p = this.entities.player;
+        if(p) {
+            if (p.katana) {
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.katanaRange, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `rgba(34, 197, 94, ${0.1 + (Math.sin(this.frame / 10) * 0.05)})`;
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.katanaRange - 5, 0, Math.PI * 2);
+                this.ctx.setLineDash([5, 10]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+
+            this.ctx.shadowColor = p.finalStand ? CONFIG.colors.ethereal : CONFIG.colors.player; 
+            this.ctx.fillStyle = p.finalStand ? CONFIG.colors.ethereal : CONFIG.colors.player;
+            if (p.phaseTimer > 0) this.ctx.globalAlpha = 0.5;
+            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+
+            if (p.halo) { 
+                this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 120, 0, Math.PI*2); 
+                this.ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)'; this.ctx.lineWidth = 1; this.ctx.stroke(); 
+            }
+        }
+
         for (const a of this.entities.altars) {
             const col = a.isEthereal ? CONFIG.colors.ethereal : CONFIG.colors.altar;
             this.ctx.fillStyle = col; this.ctx.shadowColor = col;
             this.ctx.beginPath(); this.ctx.arc(a.x, a.y, a.r + Math.sin(this.frame/8)*2, 0, Math.PI*2); this.ctx.fill();
         }
 
-        const p = this.entities.player;
-        if(p) {
-            this.ctx.shadowColor = p.finalStand ? CONFIG.colors.ethereal : CONFIG.colors.player; 
-            this.ctx.fillStyle = p.finalStand ? CONFIG.colors.ethereal : CONFIG.colors.player;
-            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); this.ctx.fill();
-            
-            if (p.halo) {
-                this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 120, 0, Math.PI*2);
-                this.ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)'; this.ctx.stroke();
-            }
-
-            if (p.katana) {
-                this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 55, 0, Math.PI*2);
-                this.ctx.strokeStyle = 'rgba(255,255,255,0.15)'; this.ctx.stroke();
-            }
-            if (p.orbitals) {
-                const angle = this.frame * 0.05; this.ctx.fillStyle = '#fff';
-                for (let k = 0; k < p.orbitals; k++) {
-                    const ox = p.x + Math.cos(angle + (k * Math.PI * 2 / 3)) * 65;
-                    const oy = p.y + Math.sin(angle + (k * Math.PI * 2 / 3)) * 65;
-                    this.ctx.beginPath(); this.ctx.arc(ox, oy, 5, 0, Math.PI*2); this.ctx.fill();
-                }
-            }
+        for (const m of this.entities.minions) {
+            this.ctx.shadowColor = CONFIG.colors.minion; this.ctx.fillStyle = CONFIG.colors.minion;
+            this.ctx.beginPath(); this.ctx.arc(m.x, m.y, 4, 0, Math.PI*2); this.ctx.fill();
         }
 
-        this.ctx.fillStyle = CONFIG.colors.minion;
-        p.minions.forEach(m => { this.ctx.beginPath(); this.ctx.arc(m.x, m.y, m.r, 0, Math.PI*2); this.ctx.fill(); });
-
         for (const e of this.entities.enemies) {
-            if (e.isMirror) { this.ctx.shadowColor = CONFIG.colors.mirror; this.ctx.fillStyle = CONFIG.colors.mirror; }
-            else if (e.enemyClass === 'brute') { this.ctx.shadowColor = '#f87171'; this.ctx.fillStyle = '#f87171'; }
-            else if (e.enemyClass === 'ranger') { this.ctx.shadowColor = '#4ade80'; this.ctx.fillStyle = '#4ade80'; }
-            else if (e.enemyClass === 'phantom') { this.ctx.shadowColor = '#22d3ee'; this.ctx.fillStyle = '#22d3ee'; }
-            else {
-                this.ctx.shadowColor = e.frozen ? '#60a5fa' : (e.isBoss ? CONFIG.colors.boss : CONFIG.colors.enemy);
-                this.ctx.fillStyle = e.frozen ? '#60a5fa' : (e.isBoss ? CONFIG.colors.boss : CONFIG.colors.enemy);
-            }
+            this.ctx.shadowColor = e.isBoss ? (e.isMirror ? CONFIG.colors.mirror : CONFIG.colors.boss) : CONFIG.colors.enemy;
+            this.ctx.fillStyle = e.isBoss ? (e.isMirror ? CONFIG.colors.mirror : CONFIG.colors.boss) : CONFIG.colors.enemy;
             this.ctx.beginPath(); this.ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); this.ctx.fill();
         }
 
         this.ctx.shadowColor = CONFIG.colors.bullet; this.ctx.fillStyle = CONFIG.colors.bullet;
         for (const b of this.entities.bullets) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
-
         this.ctx.shadowColor = '#facc15'; this.ctx.fillStyle = '#facc15';
         for (const b of this.entities.enemyBullets) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
-
+        
         this.ctx.shadowBlur = 0;
-        for (const t of this.entities.texts) {
-            this.ctx.fillStyle = t.color; this.ctx.globalAlpha = t.life;
-            this.ctx.fillText(t.text, t.x, t.y);
+        for (const t of this.entities.texts) { 
+            this.ctx.font = '700 12px "JetBrains Mono"';
+            this.ctx.fillStyle = t.color; this.ctx.globalAlpha = t.life; 
+            this.ctx.fillText(t.text, t.x, t.y); 
         }
         this.ctx.globalAlpha = 1;
-
-        if (this.device === 'mobile' && this.joystick.active) {
-            this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-            this.ctx.beginPath(); this.ctx.arc(this.joystick.originX, this.joystick.originY, 40, 0, Math.PI*2); this.ctx.stroke();
-            this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            this.ctx.beginPath(); this.ctx.arc(this.joystick.curX, this.joystick.curY, 15, 0, Math.PI*2); this.ctx.fill();
-        }
     }
     loop() { this.update(); this.draw(); requestAnimationFrame(this.loop); }
-    gameOver() { this.state = 'GAME_OVER'; document.getElementById('finalWave').innerText = this.wave; document.getElementById('finalLvl').innerText = this.entities.player.level; this.showScreen('gameOverScreen'); }
+    gameOver(win = false) { 
+        this.state = 'GAME_OVER'; 
+        document.getElementById('endStatus').innerText = win ? "victorious." : "exhausted.";
+        document.getElementById('finalWave').innerText = this.wave; 
+        document.getElementById('finalLvl').innerText = this.entities.player.level; 
+        this.showScreen('gameOverScreen'); 
+    }
 }
 
 class Player {
     constructor(x, y, type) {
-        this.x = x; this.y = y; this.r = 8;
-        this.archetype = type;
-        this.level = 1; this.xp = 0; this.maxXp = 100; this.xpMult = 1;
+        this.x = x; this.y = y; this.r = 8; this.archetype = type;
+        this.level = 1; this.xp = 0; this.maxXp = 100;
         this.hp = 100; this.maxHp = 100; this.speed = CONFIG.basePlayerSpeed;
-        this.damage = 10; this.defense = 0;
-        this.fireRate = 18; this.fireTimer = 0;
-        this.bulletSpeed = 8; this.regen = 0; this.regenFrame = 0;
-        this.multishot = 0; this.minions = []; this.onKillEffects = []; this.buffs = { fireRateMult: 1, damageMult: 1 }; this.buffTimers = [];
-        this.chosenUpgrades = new Set();
-        this.hasAscension = false; this.finalStand = false; this.standTimer = 120;
-
-        if (type === 'demonic') { this.defense = 5; this.damage = 15; this.speed *= 0.8; this.r = 10; }
-        else if (type === 'ravager') { this.damage = 25; this.maxHp = 60; this.hp = 60; this.speed *= 1.15; }
-        else if (type === 'heavenly') { this.maxHp = 150; this.hp = 150; this.regen = 2; this.speed *= 1.125; }
+        this.damage = 10; this.defense = 0; this.regen = 0;
+        this.fireRate = 18; this.fireTimer = 0; this.multishot = 0;
+        this.upgrades = {}; this.etherealUpgrades = new Set();
+        this.adrenalineTimer = 0; this.adrenalineCooldown = 0;
+        this.phaseTimer = 0; this.phaseTime = 0;
+        this.katana = 0; this.katanaRange = 0;
+        this.luck = type === 'angelic' ? 0 : (type === 'demonic' ? -10 : 0);
+        if (type === 'angelic') { this.regen = 1.0; this.speed *= 1.125; this.fireRate *= 0.85; }
+        if (type === 'phantom') { this.damage *= 1.5; this.maxHp = 60; this.hp = 60; }
+        if (type === 'demonic') { this.defense = 5; this.maxHp = 150; this.hp = 150; }
     }
 
     update(game) {
-        if (this.finalStand) {
-            this.standTimer -= 1/60;
-            document.getElementById('standTimer').innerText = Math.ceil(this.standTimer);
-            if (this.standTimer <= 0) game.gameOver();
-        }
-
-        this.buffs.fireRateMult = (this.finalStand ? 5 : 1); 
-        this.buffs.damageMult = (this.finalStand ? 5 : 1);
-
-        if (this.hunger) {
-            const missing = 1 - (this.hp / this.maxHp);
-            this.buffs.damageMult *= (1 + missing);
-        }
-
-        this.buffTimers = this.buffTimers.filter(b => {
-            if (b.type === 'adrenaline') this.buffs.fireRateMult *= 1.7;
-            if (b.type === 'risky') this.buffs.damageMult *= 0.85;
-            return --b.life > 0;
-        });
+        if (this.finalStand) { this.standTimer -= 1/60; document.getElementById('standTimer').innerText = Math.ceil(this.standTimer); if (this.standTimer <= 0) game.gameOver(); }
+        if (this.adrenalineTimer > 0) this.adrenalineTimer--;
+        if (this.adrenalineCooldown > 0) this.adrenalineCooldown--;
+        if (this.phaseTimer > 0) this.phaseTimer--;
 
         let dx = 0, dy = 0;
         if (game.device === 'pc') {
@@ -671,64 +733,51 @@ class Player {
             if(dx || dy) { const l = Math.hypot(dx, dy); dx/=l; dy/=l; }
         } else { dx = game.joystick.vec.x; dy = game.joystick.vec.y; }
 
-        const moveSpeed = this.speed * (this.finalStand ? 5 : 1);
-        this.x += dx * moveSpeed; this.y += dy * moveSpeed;
+        this.x += dx * this.speed * (this.finalStand ? 3 : 1);
+        this.y += dy * this.speed * (this.finalStand ? 3 : 1);
         this.x = Math.max(this.r, Math.min(game.canvas.width - this.r, this.x));
         this.y = Math.max(this.r, Math.min(game.canvas.height - this.r, this.y));
 
-        if (this.fireTrail && game.frame % 10 === 0) {
-            game.entities.particles.push({ x: this.x, y: this.y, life: 2, vx: 0, vy: 0, damage: this.damage * 0.5 });
-        }
-
-        if (this.regen > 0 && ++this.regenFrame >= 60) { this.hp = Math.min(this.maxHp, this.hp + this.regen); this.regenFrame = 0; }
+        if (this.regen > 0 && game.frame % 60 === 0) this.hp = Math.min(this.maxHp, this.hp + this.regen);
 
         if (--this.fireTimer <= 0) {
             let tx, ty, fire = false;
-            if (game.device === 'pc' && game.mouse.down) { tx = game.mouse.x; ty = game.mouse.y; fire = true; }
-            else if (game.device === 'mobile' && game.mouse.down) { tx = game.mouse.x; ty = game.mouse.y; fire = true; }
+            if (game.mouse.down) { tx = game.mouse.x; ty = game.mouse.y; fire = true; }
             else {
                 let near = null, minD = 500;
                 for(let e of game.entities.enemies) { let d = Math.hypot(this.x-e.x, this.y-e.y); if(d < minD) { minD = d; near = e; } }
                 if(near) { tx = near.x; ty = near.y; fire = true; }
             }
             if (fire) {
-                this.fireTimer = Math.max(2, (this.fireRate / this.buffs.fireRateMult));
-                const angle = Math.atan2(ty - this.y, tx - this.x), count = 1 + this.multishot;
-                for(let i=0; i<count; i++) {
-                    const offset = (i - (count-1)/2) * 0.15;
-                    let d = this.damage * this.buffs.damageMult;
-                    game.entities.bullets.push({ x: this.x, y: this.y, vx: Math.cos(angle + offset) * this.bulletSpeed, vy: Math.sin(angle + offset) * this.bulletSpeed, damage: d, life: 75, r: 3 });
+                this.fireTimer = (this.adrenalineTimer > 0) ? Math.floor(this.fireRate * 0.3) : this.fireRate;
+                const angle = Math.atan2(ty - this.y, tx - this.x);
+                let count = 1;
+                if (this.multishot > 0 && Math.random() < (this.multishotChance || 0.2) * (1 + this.luck/100)) count += this.multishot;
+                for(let i=0; i < count; i++) {
+                    const off = (i - (count-1)/2) * 0.2;
+                    game.entities.bullets.push({ x: this.x, y: this.y, vx: Math.cos(angle+off)*8, vy: Math.sin(angle+off)*8, damage: this.damage, life: 75, r: 3 });
                 }
             }
         }
     }
 
     takeDamage(amt) {
-        if (this.finalStand) return;
+        if (this.phaseTimer > 0) return;
         this.hp -= Math.max(1, amt - this.defense);
+        if (this.phaseTime > 0) this.phaseTimer = this.phaseTime;
         if (this.hp <= 0) {
-            if (this.hasAscension) {
-                this.finalStand = true; this.hasAscension = false; this.hp = this.maxHp;
-                document.getElementById('timerOverlay').style.display = 'block';
-                Game.spawnFloatingText(this.x, this.y, "HEAVENLY ASCENSION", "#a855f7");
-            } else { Game.gameOver(); }
+            if (this.hasAscension) { this.finalStand = true; this.hasAscension = false; this.hp = this.maxHp; this.standTimer = 120; document.getElementById('timerOverlay').style.display = 'block'; }
+            else Game.gameOver();
         }
     }
 
     gainXp(amt, game, x, y) {
-        amt *= this.xpMult;
-        this.onKillEffects.forEach(effect => {
-            if (effect === 'adrenaline' && Math.random() < 0.7) this.buffTimers.push({ type: 'adrenaline', life: 180 });
-            if (effect === 'vampire' && Math.random() < 0.1) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.05);
-            if (effect === 'void') this.damage *= 1.001;
-        });
-        game.spawnFloatingText(x, y, `+${Math.floor(amt)}xp`, CONFIG.colors.xp);
-        if (this.level >= CONFIG.maxLevel) return;
+        if (this.voidReaper) this.damage *= 1.001;
+        if (this.archetype === 'angelic') this.luck += 0.5;
         this.xp += amt;
         if (this.xp >= this.maxXp) {
-            this.level++; this.xp -= this.maxXp; this.maxXp *= 1.25; this.damage *= 1.1; this.maxHp *= 1.05; this.hp = this.maxHp;
+            this.level++; this.xp = 0; this.maxXp *= 1.2;
             if (this.level % 5 === 0) game.presentUpgrades(true);
-            else game.spawnFloatingText(this.x, this.y, "level up!", CONFIG.colors.xp);
         }
         document.getElementById('xpBar').style.width = `${(this.xp/this.maxXp)*100}%`;
     }
@@ -737,58 +786,46 @@ class Player {
 class Neal {
     constructor(x, y, level) {
         this.x = x; this.y = y; this.level = level; 
-        this.r = 7 + level*0.2; 
-        this.hp = 20 * level; 
-        this.damage = 6 + level;
-        this.speed = CONFIG.baseEnemySpeed + Math.random()*0.3; 
-        this.isBoss = false; 
-        this.frozen = 0;
-        this.enemyClass = null;
-
-        if (level > 15 && Math.random() < 0.25) {
-            const roll = Math.random();
-            if (roll < 0.33) { this.enemyClass = 'brute'; this.hp *= 2.5; this.speed *= 0.6; this.r *= 1.5; } 
-            else if (roll < 0.66) { this.enemyClass = 'ranger'; this.hp *= 0.8; this.shootTimer = 120; } 
-            else { this.enemyClass = 'phantom'; this.speed *= 1.8; this.hp *= 0.5; }
-        }
+        this.r = 7 + level*0.2; this.hp = 20 * level; 
+        this.damage = 6 + level; this.speed = CONFIG.baseEnemySpeed + (level * 0.05);
     }
-
     update(game, p) {
-        if (this.frozen > 0) { this.frozen--; return; }
         const a = Math.atan2(p.y - this.y, p.x - this.x);
         this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed;
-
-        if (this.enemyClass === 'ranger' && --this.shootTimer <= 0) {
-            this.shootTimer = 180;
-            game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, damage: this.damage, life: 100, r: 4 });
-        }
     }
-    takeDamage(d, g) {
-        this.hp -= d;
-        for(let i=0; i<2; i++) g.entities.particles.push({ x: this.x, y: this.y, life: 1, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4 });
+    takeDamage(d, g) { this.hp -= d; }
+}
+
+class Minion {
+    constructor(player, index) {
+        this.angle = (Math.PI * 2 / 3) * index;
+        this.dist = 65;
+        this.x = player.x; this.y = player.y;
+        this.damage = 5;
+    }
+    update(game, p) {
+        this.angle += 0.04;
+        this.x = p.x + Math.cos(this.angle) * this.dist;
+        this.y = p.y + Math.sin(this.angle) * this.dist;
+        game.entities.enemies.forEach(e => {
+            if (Math.hypot(e.x - this.x, e.y - this.y) < e.r + 5) e.takeDamage(this.damage, game);
+        });
     }
 }
 
 class Boss extends Neal {
     constructor(x, y, wave) {
-        super(x, y, wave);
-        this.isBoss = true;
-        this.r = 30;
-        // Start weak (Wave 10) and grow exponentially (Wave 20)
-        const powerScale = Math.pow(1.9, wave/10 - 1); 
-        this.hp = 600 * powerScale; 
-        this.damage = 10 * (wave/10);
-        this.speed = 0.9 + (wave/100);
-        this.shotTimer = 0;
+        super(x, y, wave); this.isBoss = true; this.r = 30; this.hp = 500 * (wave/10);
+        this.fireTimer = 60;
     }
     update(game, p) {
         super.update(game, p);
-        if (this.frozen > 0) return;
-        if (--this.shotTimer <= 0) {
-            this.shotTimer = 80;
-            const baseAngle = Math.atan2(p.y - this.y, p.x - this.x);
-            for(let i = -2; i <= 2; i++) {
-                game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(baseAngle + i * 0.3) * 4.5, vy: Math.sin(baseAngle + i * 0.3) * 4.5, damage: this.damage * 0.7, life: 160, r: 5 });
+        if (--this.fireTimer <= 0) {
+            this.fireTimer = 100;
+            const a = Math.atan2(p.y - this.y, p.x - this.x);
+            for (let i = 0; i < 3; i++) {
+                const spread = (i - 1) * 0.3;
+                game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(a + spread) * 5, vy: Math.sin(a + spread) * 5, damage: 15, life: 200, r: 5 });
             }
         }
     }
@@ -797,52 +834,19 @@ class Boss extends Neal {
 class MirrorBoss extends Neal {
     constructor(x, y, player) {
         super(x, y, player.level);
-        this.isBoss = true;
-        this.isMirror = true;
-        this.r = player.r * 1.5;
-        this.hp = player.maxHp * 15; // Increased HP to make it a finale fight
-        this.damage = player.damage * 0.8;
-        this.speed = player.speed * 0.85;
-        this.shotTimer = 0;
-        this.playerRef = player;
+        this.isBoss = true; this.isMirror = true;
+        this.r = player.r * 1.5; this.hp = player.maxHp * 15;
+        this.damage = player.damage; this.speed = player.speed * 0.85;
+        this.fireTimer = 0;
     }
     update(game, p) {
-        if (this.frozen > 0) { this.frozen--; return; }
         const dist = Math.hypot(p.x - this.x, p.y - this.y);
-        const angle = Math.atan2(p.y - this.y, p.x - this.x);
-        
-        // Mirror Logic: try to maintain a combat distance similar to player's preferred range
-        if (dist > 250) {
-            this.x += Math.cos(angle) * this.speed;
-            this.y += Math.sin(angle) * this.speed;
-        } else if (dist < 150) {
-            this.x -= Math.cos(angle) * this.speed;
-            this.y -= Math.sin(angle) * this.speed;
-        } else {
-            this.x += Math.cos(angle + 0.8) * this.speed;
-            this.y += Math.sin(angle + 0.8) * this.speed;
-        }
-
-        if (--this.shotTimer <= 0) {
-            this.shotTimer = 20;
-            const shootAngle = Math.atan2(p.y - this.y, p.x - this.x);
-            game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(shootAngle) * 8, vy: Math.sin(shootAngle) * 8, damage: this.damage, life: 120, r: 4 });
-        }
-    }
-}
-
-class Minion {
-    constructor(x, y) { this.x = x; this.y = y; this.r = 4; this.speed = 4.2; this.damage = 6; }
-    update(game, p) {
-        let near = null, minD = 350;
-        for (let e of game.entities.enemies) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minD) { minD = d; near = e; } }
-        if (near) {
-            const a = Math.atan2(near.y - this.y, near.x - this.x);
-            this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed;
-            if (minD < this.r + near.r) near.takeDamage(this.damage, game);
-        } else {
-            const a = Math.atan2(p.y - this.y, p.x - this.x);
-            if (Math.hypot(p.x - this.x, p.y - this.y) > 40) { this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed; }
+        const a = Math.atan2(p.y - this.y, p.x - this.x);
+        if (dist > 250) { this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed; }
+        else if (dist < 180) { this.x -= Math.cos(a) * this.speed; this.y -= Math.sin(a) * this.speed; }
+        if (--this.fireTimer <= 0) {
+            this.fireTimer = 30;
+            game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(a)*7, vy: Math.sin(a)*7, damage: 10, life: 120, r: 5 });
         }
     }
 }
