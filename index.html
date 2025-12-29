@@ -520,10 +520,33 @@ class GameEngine {
             const e = this.entities.enemies[i];
             e.update(this, p);
 
+            // --- COLLISION PHYSICS (Player and Enemy) ---
+            const dx = e.x - p.x;
+            const dy = e.y - p.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = e.r + p.r;
+
+            if (dist < minDist) {
+                // Determine collision depth
+                const overlap = minDist - dist;
+                // Normalize direction
+                const nx = dx / (dist || 1);
+                const ny = dy / (dist || 1);
+
+                // Push enemy out of player hit box
+                // Player is "immovable" by enemies in this context
+                e.x += nx * overlap;
+                e.y += ny * overlap;
+
+                // Trigger damage
+                p.takeDamage(e.damage, this); 
+                if (p.thorns) e.hp -= p.thorns;
+            }
+
             // Hollow Mark Bleed Tick
             if (e.hollowMarked) {
-                if (game.frame % 30 === 0) {
-                    const bleed = e.maxHp * 0.025; // Bleeds 2.5% per tick, total 25% over 10 ticks (approx 5 secs)
+                if (this.frame % 30 === 0) {
+                    const bleed = e.maxHp * 0.025;
                     e.hp -= bleed;
                     e.hollowMarkTicks--;
                     if (e.hollowMarkTicks <= 0) e.hollowMarked = false;
@@ -543,7 +566,6 @@ class GameEngine {
                     const finalDmg = b.damage * (p.hp >= p.maxHp ? (1 + (p.vitalOverflow || 0) * 0.1) : 1);
                     e.hp -= finalDmg;
                     
-                    // Apply Hollow Mark
                     if (p.hollowMark && !e.hollowMarked) {
                         e.hollowMarked = true;
                         e.hollowMarkTicks = 10;
@@ -554,7 +576,6 @@ class GameEngine {
                 }
             }
 
-            if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) { p.takeDamage(e.damage, this); if (p.thorns) e.hp -= p.thorns; }
             if (e.hp <= 0) {
                 const xpVal = e.isBoss ? 500 : 15;
                 p.gainXp(xpVal, this);
@@ -659,7 +680,15 @@ class Player {
         if (game.device === 'pc') {
             if (game.keys['w']) dy = -1; if (game.keys['s']) dy = 1; if (game.keys['a']) dx = -1; if (game.keys['d']) dx = 1;
         } else { dx = game.joystick.vec.x; dy = game.joystick.vec.y; }
-        if(dx || dy) { const l = Math.hypot(dx, dy); this.x += (dx/l) * this.speed; this.y += (dy/l) * this.speed; }
+        if(dx || dy) { 
+            const l = Math.hypot(dx, dy); 
+            this.x += (dx/l) * this.speed; 
+            this.y += (dy/l) * this.speed; 
+        }
+
+        // Keep player in bounds
+        this.x = Math.max(this.r, Math.min(game.canvas.width - this.r, this.x));
+        this.y = Math.max(this.r, Math.min(game.canvas.height - this.r, this.y));
 
         if (this.regen > 0 && game.frame % 60 === 0) this.hp = Math.min(this.maxHp, this.hp + this.regen);
 
@@ -711,7 +740,8 @@ class Neal {
     }
     update(game, p) {
         const a = Math.atan2(p.y - this.y, p.x - this.x);
-        this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed;
+        this.x += Math.cos(a) * this.speed; 
+        this.y += Math.sin(a) * this.speed;
     }
 }
 
@@ -722,11 +752,15 @@ class Boss extends Neal {
         this.speed = CONFIG.baseEnemySpeed * 0.35; this.fireTimer = 80;
     }
     update(game, p) {
-        super.update(game, p);
+        // Boss update follows different logic than standard Neal
+        const a = Math.atan2(p.y - this.y, p.x - this.x);
+        this.x += Math.cos(a) * this.speed; 
+        this.y += Math.sin(a) * this.speed;
+
         if (--this.fireTimer <= 0) {
             this.fireTimer = 100;
-            const a = Math.atan2(p.y - this.y, p.x - this.x);
-            for(let i=-1; i<=1; i++) game.spawnBullet(game.entities.enemyBullets, this.x, this.y, Math.cos(a+i*0.3)*4, Math.sin(a+i*0.3)*4, 15, 250, 6);
+            const fa = Math.atan2(p.y - this.y, p.x - this.x);
+            for(let i=-1; i<=1; i++) game.spawnBullet(game.entities.enemyBullets, this.x, this.y, Math.cos(fa+i*0.3)*4, Math.sin(fa+i*0.3)*4, 15, 250, 6);
         }
     }
 }
