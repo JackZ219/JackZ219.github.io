@@ -5,30 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>neals.</title>
     <style>
-        @import url('https://fonts.cdnfonts.com/css/product-sans');
+        /* Using Product Sans / Google Sans style font */
+        @font-face {
+            font-family: 'Product Sans';
+            src: url('https://fonts.gstatic.com/s/productsans/v5/HYvgU2fE2nRJvZ5JFAumzegdm0LZdjK5nrQHYu66un8.woff2') format('woff2');
+        }
 
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
         }
 
         body {
             margin: 0;
             padding: 0;
-            background-color: #030303;
+            background-color: #050505;
             color: #eee;
-            font-family: 'Product Sans', 'Google Sans', sans-serif;
+            font-family: 'Product Sans', sans-serif;
             overflow: hidden;
             text-transform: lowercase;
             width: 100vw;
             height: 100vh;
-            letter-spacing: -0.02em;
-            font-weight: 400;
+            letter-spacing: -0.01em;
         }
 
         #gameCanvas {
@@ -56,148 +56,126 @@
         .screen {
             pointer-events: auto;
             text-align: center;
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 2.5rem;
-            border-radius: 2.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            max-width: 580px;
-            width: 95%;
-            max-height: 85vh;
+            background: rgba(5, 5, 5, 0.98);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            border: 1px solid #222;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
             overflow-y: auto;
             display: none;
-            animation: screenIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-            scrollbar-width: none;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            scrollbar-width: none; /* Hide scrollbar Firefox */
         }
-        .screen::-webkit-scrollbar { display: none; }
+        .screen::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome/Safari */
 
         .active { display: block; }
 
-        h1 { font-size: 4rem; margin: 0 0 0.5rem 0; color: #3b82f6; font-weight: 400; letter-spacing: -0.05em; }
-        h2 { font-size: 1.8rem; margin: 0 0 1rem 0; color: #fff; font-weight: 400; letter-spacing: -0.03em; }
-        p { margin-bottom: 2rem; color: #777; line-height: 1.6; font-size: 1rem; }
+        h1 { font-size: 3rem; margin-top: 0; margin-bottom: 0.5rem; color: #3b82f6; font-weight: 400; }
+        h2 { font-size: 1.5rem; margin-top: 0; margin-bottom: 1rem; color: #ef4444; font-weight: 400; }
+        p { margin-bottom: 1.5rem; color: #888; line-height: 1.4; font-size: 0.95rem; }
 
         button {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #111;
+            border: 1px solid #333;
             color: #fff;
-            padding: 16px 32px;
+            padding: 12px 24px;
             font-family: inherit;
             font-size: 1rem;
-            font-weight: 400;
             cursor: pointer;
-            margin: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 100px;
+            margin: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
             text-transform: lowercase;
-            position: relative;
-            overflow: hidden;
         }
 
-        button:hover { 
-            background: rgba(255, 255, 255, 0.08); 
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        
-        button:active { transform: scale(0.96); }
-
+        button:hover { border-color: #555; background: #1a1a1a; transform: translateY(-1px); }
         button.primary { border-color: #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-        button.primary:hover { background: rgba(59, 130, 246, 0.15); border-color: #60a5fa; }
 
+        /* Adaptive Upgrade Grid */
         .upgrade-grid { 
             display: grid; 
             grid-template-columns: 1fr; 
-            gap: 16px; 
+            gap: 12px; 
             width: 100%;
         }
 
+        /* Adjust columns for wider screens */
         @media (min-width: 500px) {
             .upgrade-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
         }
 
         .upgrade-card { 
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            padding: 20px; 
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a; 
+            padding: 16px; 
             cursor: pointer; 
-            border-radius: 1.5rem; 
+            border-radius: 14px; 
             text-align: left; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            transition: all 0.2s; 
             position: relative; 
+            overflow: hidden; 
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
-        
-        .upgrade-card:hover { 
-            border-color: rgba(255, 255, 255, 0.2); 
-            background: rgba(255, 255, 255, 0.05); 
-            transform: scale(1.03) translateY(-4px); 
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-        }
+        .upgrade-card:hover { border-color: #444; transform: scale(1.01); background: #111; }
 
-        .type-atk { border-bottom: 4px solid #ec4899; }
-        .type-rng { border-bottom: 4px solid #eab308; }
-        .type-def { border-bottom: 4px solid #22c55e; }
-        .type-vmp { border-bottom: 4px solid #991b1b; }
-        .type-ethereal { border-bottom: 4px solid #a855f7; }
+        .type-atk { border-left: 4px solid #ec4899; }
+        .type-rng { border-left: 4px solid #eab308; }
+        .type-def { border-left: 4px solid #22c55e; }
+        .type-ethereal { border-left: 4px solid #a855f7; }
 
-        .upgrade-name { font-weight: 400; font-size: 1.15rem; display: block; margin-bottom: 4px; color: #fff; }
-        .upgrade-category { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 8px;}
-        .upgrade-effect { color: #aaa; font-size: 0.9rem; display: block; line-height: 1.5; }
-        .upgrade-level { position: absolute; top: 20px; right: 20px; font-size: 0.75rem; color: #3b82f6; font-weight: 700; background: rgba(59, 130, 246, 0.1); padding: 2px 8px; border-radius: 6px; }
+        .upgrade-name { font-weight: 400; font-size: 1.05rem; display: block; margin-bottom: 2px;}
+        .upgrade-category { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.05em; }
+        .upgrade-effect { color: #999; font-size: 0.85rem; display: block; margin-top: 4px; line-height: 1.3; }
+        .upgrade-level { position: absolute; top: 16px; right: 16px; font-size: 0.7rem; color: #3b82f6; }
 
         #hud {
             position: absolute;
-            top: 40px;
-            left: 40px;
+            top: 25px;
+            left: 25px;
             pointer-events: none;
             display: none;
             z-index: 5;
-            animation: fadeIn 1s ease;
         }
         
-        .stat-row { margin-bottom: 8px; font-size: 1rem; text-shadow: 0 2px 10px rgba(0,0,0,0.8); font-weight: 400; }
+        .stat-row { margin-bottom: 4px; font-size: 0.9rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 
         #xpBarContainer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 6px;
-            background: rgba(255,255,255,0.02);
+            height: 3px;
+            background: rgba(255,255,255,0.05);
             z-index: 20;
             display: none;
         }
 
         #xpBar {
             height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            background: #3b82f6;
             width: 0%;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
-            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #timerOverlay {
             position: fixed;
-            top: 40px;
-            right: 40px;
+            top: 25px;
+            right: 25px;
             color: #a855f7;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             display: none;
-            text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
         }
 
-        @keyframes screenIn {
-            from { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(10px); }
-            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -216,11 +194,9 @@
     <div id="uiLayer">
         <div id="deviceScreen" class="screen active">
             <h1>neals.</h1>
-            <p>choose your interface</p>
-            <div style="display: flex; justify-content: center; gap: 12px;">
-                <button onclick="Game.setDevice('mobile')">touch</button>
-                <button onclick="Game.setDevice('pc')">desktop</button>
-            </div>
+            <p>select control method</p>
+            <button onclick="Game.setDevice('mobile')">touch</button>
+            <button onclick="Game.setDevice('pc')">keyboard/mouse</button>
         </div>
 
         <div id="classScreen" class="screen">
@@ -229,29 +205,24 @@
                 <div class="upgrade-card type-atk" onclick="Game.startGame('phantom')">
                     <span class="upgrade-category">phantom</span>
                     <span class="upgrade-name">lethal strikes</span>
-                    <span class="upgrade-effect">explosive damage, but minimal vitality.</span>
+                    <span class="upgrade-effect">massive damage, but fragile body.</span>
                 </div>
                 <div class="upgrade-card type-rng" onclick="Game.startGame('angelic')">
                     <span class="upgrade-category">angelic</span>
                     <span class="upgrade-name">divine speed</span>
-                    <span class="upgrade-effect">high regen & speed. kills grant luck.</span>
+                    <span class="upgrade-effect">regen, +12.5% speed. every kill grants +0.5% luck.</span>
                 </div>
                 <div class="upgrade-card type-def" onclick="Game.startGame('demonic')">
                     <span class="upgrade-category">demonic</span>
                     <span class="upgrade-name">plated armor</span>
-                    <span class="upgrade-effect">massive defense and durability.</span>
-                </div>
-                <div class="upgrade-card type-vmp" onclick="Game.startGame('vampiric')">
-                    <span class="upgrade-category">vampiric</span>
-                    <span class="upgrade-name">sanguine thirst</span>
-                    <span class="upgrade-effect">natural lifesteal and high health reserves.</span>
+                    <span class="upgrade-effect">bulky armor and high base survival.</span>
                 </div>
             </div>
         </div>
 
         <div id="upgradeScreen" class="screen">
-            <h2 id="upgradeTitle" style="color: #fff">altar of neal</h2>
-            <p id="upgradeSubtitle">select a mutation to evolve</p>
+            <h2 id="upgradeTitle" style="color: #22c55e">altar of neal</h2>
+            <p id="upgradeSubtitle">choose your mutation</p>
             <div class="upgrade-grid" id="upgradeOptions"></div>
         </div>
 
@@ -268,7 +239,6 @@ const CONFIG = {
     baseEnemySpeed: 1.6,
     waveDuration: 400,
     maxLevel: 30,
-    bulletPoolSize: 200,
     colors: {
         player: '#3b82f6',
         enemy: '#ef4444',
@@ -276,56 +246,39 @@ const CONFIG = {
         ethereal: '#a855f7',
         bullet: '#fff',
         xp: '#eab308',
-        indicator: 'rgba(239, 68, 68, 0.4)',
-        vamp: '#991b1b',
-        hollowMark: '#a855f7'
+        indicator: 'rgba(239, 68, 68, 0.4)'
     }
 };
 
-class Bullet {
-    constructor() { this.reset(); }
-    reset() {
-        this.active = false; this.x = 0; this.y = 0;
-        this.vx = 0; this.vy = 0; this.damage = 0;
-        this.life = 0; this.r = 3;
-    }
-    init(x, y, vx, vy, damage, life, r = 3) {
-        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
-        this.damage = damage; this.life = life; this.r = r;
-        this.active = true;
-    }
-}
-
 const UPGRADES_DB = {
     atk: [
-        { id: 'swift_firing', name: 'swift firing', getDesc: (lv) => `increase fire rate. tier ${lv}`, apply: (p, lv) => { p.fireRate = Math.max(3, p.fireRate - 4); } },
-        { id: 'frostbite', name: 'frostbite', getDesc: (lv) => `slows enemies on hit. tier ${lv}`, apply: (p, lv) => { p.frost = lv; } },
+        { id: 'swift_firing', name: 'swift firing', getDesc: (lv) => `increase fire rate, but lose some damage. tier ${lv}`, apply: (p, lv) => { p.fireRate = Math.max(3, p.fireRate - 4); p.damage *= 0.95; } },
+        { id: 'frostbite', name: 'frostbite', getDesc: (lv) => `slows enemies on hit. power: ${lv}`, apply: (p, lv) => { p.frost = lv; } },
         { id: 'minions', name: 'orbital rammers', getDesc: (lv) => `summons ${lv} orbital rammer(s).`, apply: (p, lv) => { p.minionCount = lv; } },
         { id: 'static_field', name: 'static field', getDesc: (lv) => `shocks nearby enemies. ${lv * 15}% chance.`, apply: (p, lv) => { p.shockChance = lv * 0.15; } }
     ],
     rng: [
-        { id: 'adrenaline', name: 'adrenaline', getDesc: (lv) => `kills grant a fire rate boost.`, apply: (p, lv) => { p.adrenalineChance = 0.15; p.adrenalineLv = lv; } },
+        { id: 'adrenaline', name: 'adrenaline', getDesc: (lv) => `kills grant a huge fire rate boost (no cooldown).`, apply: (p, lv) => { p.adrenalineChance = 0.15; p.adrenalineLv = lv; } },
         { id: 'multishot', name: 'risky reload', getDesc: (lv) => `chance to fire extra bullets.`, apply: (p, lv) => { p.multishotChance = 0.20; p.multishot = lv; } },
         { id: 'singularity', name: 'singularity', getDesc: (lv) => `bullets pull enemies on impact.`, apply: (p, lv) => { p.pullChance = lv * 0.12; } },
         { id: 'chain', name: 'chain lightning', getDesc: (lv) => `bullets jump to ${lv} targets.`, apply: (p, lv) => { p.chainChance = 0.40; p.chainCount = lv; } }
     ],
     def: [
-        { id: 'katana', name: 'spirit katana', getDesc: (lv) => `reflect bullets in a radius.`, apply: (p, lv) => { p.katana = lv; p.katanaRange = 45 + (lv * 15); } },
+        { id: 'katana', name: 'spirit katana', getDesc: (lv) => `reflect enemy bullets in a radius.`, apply: (p, lv) => { p.katana = lv; p.katanaRange = 45 + (lv * 15); } },
         { id: 'regen', name: 'regeneration core', getDesc: (lv) => `restore health over time.`, apply: (p, lv) => { p.regen = lv * 1.5; } },
         { id: 'phase_shift', name: 'phase shift', getDesc: (lv) => `invincibility after being hit.`, apply: (p, lv) => { p.phaseTime = lv * 30; } },
         { id: 'thorns', name: 'barbed skin', getDesc: (lv) => `enemies take damage when touching you.`, apply: (p, lv) => { p.thorns = lv * 5; } }
     ],
-    vmp: [
-        { id: 'bloodbane', name: 'bloodbane drain', getDesc: (lv) => `gain ${lv * 5}% flat lifesteal on hit.`, apply: (p, lv) => { p.lifesteal = (p.lifesteal || 0) + 0.05; } },
-        { id: 'sanguine_aura', name: 'sanguine aura', getDesc: (lv) => `siphons life from nearby enemies.`, apply: (p, lv) => { p.vampAuraRange = lv * 40; p.vampAuraPower = lv * 0.1; } },
-        { id: 'hollow_mark', name: 'hollow mark', getDesc: (lv) => `bullets mark enemies to bleed 25% max hp.`, apply: (p, lv) => { p.hollowMark = lv; } },
-        { id: 'vital_overflow', name: 'vital overflow', getDesc: (lv) => `+${lv * 10}% dmg boost when at full health.`, apply: (p, lv) => { p.vitalOverflow = lv; } }
-    ],
     ethereal: {
-        phantom: [{ id: 'void_reaper', name: 'void reaper', desc: 'kills grant +0.1% damage. hp capped at 40.', apply: (p) => { p.voidReaper = true; p.maxHp = 40; p.hp = Math.min(p.hp, 40); } }],
-        angelic: [{ id: 'angel_ascension', name: 'angelic ascension', desc: 'survive 2m with 500% stats after death.', apply: (p) => { p.hasAscension = true; } }],
-        demonic: [{ id: 'infernal_fortress', name: 'infernal fortress', desc: '+50 defense, immune to bullets. -50% speed.', apply: (p) => { p.defense += 50; p.bulletImmune = true; p.speed *= 0.5; } }],
-        vampiric: [{ id: 'blood_pact', name: 'blood pact', desc: '40% lifesteal. natural regeneration disabled.', apply: (p) => { p.lifesteal = 0.40; p.regen = 0; p.hasBloodPact = true; } }]
+        phantom: [
+            { id: 'void_reaper', name: 'void reaper', desc: 'kills grant +0.1% damage. hp capped at 40.', apply: (p) => { p.voidReaper = true; p.maxHp = 40; p.hp = Math.min(p.hp, 40); } }
+        ],
+        angelic: [
+            { id: 'angel_ascension', name: 'angelic ascension', desc: 'survive 2m with 500% stats after death.', apply: (p) => { p.hasAscension = true; } }
+        ],
+        demonic: [
+            { id: 'infernal_fortress', name: 'infernal fortress', desc: '+50 defense, immune to bullets. -50% speed.', apply: (p) => { p.defense += 50; p.bulletImmune = true; p.speed *= 0.5; } }
+        ]
     }
 };
 
@@ -335,11 +288,7 @@ class GameEngine {
         this.ctx = this.canvas.getContext('2d');
         this.resize();
         this.state = 'MENU';
-        this.entities = { player: null, enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [], minions: [], drops: [] };
-        
-        this.bulletPool = Array.from({ length: CONFIG.bulletPoolSize }, () => new Bullet());
-        this.enemyBulletPool = Array.from({ length: CONFIG.bulletPoolSize }, () => new Bullet());
-
+        this.entities = { player: null, enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [], minions: [] };
         this.spawnIndicators = [];
         this.wave = 1; this.frame = 0;
         this.bossActive = false;
@@ -368,24 +317,16 @@ class GameEngine {
         this.showScreen('hud');
         document.getElementById('hud').style.display = 'block';
         document.getElementById('xpBarContainer').style.display = 'block';
-        this.bulletPool.forEach(b => b.reset());
-        this.enemyBulletPool.forEach(b => b.reset());
-        this.entities = { player: new Player(this.canvas.width/2, this.canvas.height/2, archetype), enemies: [], bullets: this.bulletPool, enemyBullets: this.enemyBulletPool, particles: [], altars: [], texts: [], minions: [], drops: [] };
+        this.entities = { player: new Player(this.canvas.width/2, this.canvas.height/2, archetype), enemies: [], bullets: [], enemyBullets: [], particles: [], altars: [], texts: [], minions: [] };
         this.spawnIndicators = [];
         this.wave = 1; this.frame = 0; this.bossActive = false;
         document.getElementById('waveVal').innerText = this.wave;
     }
 
-    spawnBullet(pool, x, y, vx, vy, damage, life, r) {
-        const b = pool.find(bullet => !bullet.active);
-        if (b) b.init(x, y, vx, vy, damage, life, r);
-    }
-
     showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         if (id !== 'hud') {
-            const screen = document.getElementById(id);
-            screen.classList.add('active');
+            document.getElementById(id).classList.add('active');
             document.getElementById('uiLayer').style.pointerEvents = 'auto';
         } else { document.getElementById('uiLayer').style.pointerEvents = 'none'; }
     }
@@ -416,7 +357,12 @@ class GameEngine {
         if (Math.random() < 0.5) { x = Math.random() < 0.5 ? -margin : this.canvas.width + margin; y = Math.random() * this.canvas.height; }
         else { x = Math.random() * this.canvas.width; y = Math.random() < 0.5 ? -margin : this.canvas.height + margin; }
         const maxDuration = 60;
-        this.spawnIndicators.push({ x: Math.max(margin, Math.min(this.canvas.width-margin, x)), y: Math.max(margin, Math.min(this.canvas.height-margin, y)), timer: maxDuration, max: maxDuration });
+        this.spawnIndicators.push({ 
+            x: Math.max(margin, Math.min(this.canvas.width-margin, x)), 
+            y: Math.max(margin, Math.min(this.canvas.height-margin, y)), 
+            timer: maxDuration,
+            max: maxDuration
+        });
     }
 
     spawnEnemy(x, y) { this.entities.enemies.push(new Neal(x, y, this.wave)); }
@@ -444,7 +390,7 @@ class GameEngine {
             });
             if (list.length === 0) this.resumeGame(true);
         } else {
-            ['atk', 'rng', 'def', 'vmp'].forEach(cat => {
+            ['atk', 'rng', 'def'].forEach(cat => {
                 let pool = UPGRADES_DB[cat].filter(u => (p.upgrades[u.id] || 0) < 3);
                 if (pool.length > 0) {
                     const u = pool[Math.floor(Math.random() * pool.length)];
@@ -452,7 +398,15 @@ class GameEngine {
                     const el = document.createElement('div');
                     el.className = `upgrade-card type-${cat}`;
                     el.innerHTML = `<span class="upgrade-level">tier ${lv}</span><span class="upgrade-category">${cat}</span><span class="upgrade-name">${u.name}</span><span class="upgrade-effect">${u.getDesc(lv)}</span>`;
-                    el.onclick = () => { p.upgrades[u.id] = lv; u.apply(p, lv); this.resumeGame(!isLevelUp); };
+                    el.onclick = () => { 
+                        p.upgrades[u.id] = lv; 
+                        u.apply(p, lv); 
+                        if (u.id === 'minions') {
+                            this.entities.minions = [];
+                            for(let i=0; i<lv; i++) this.entities.minions.push(new Minion(p, i));
+                        }
+                        this.resumeGame(!isLevelUp); 
+                    };
                     container.appendChild(el);
                 }
             });
@@ -470,7 +424,9 @@ class GameEngine {
         this.state = 'PLAYING'; this.showScreen('hud');
     }
 
-    spawnFloatingText(x, y, text, color, life = 1) { this.entities.texts.push({x, y, text, color, life, dy: -0.6, fade: 0.015}); }
+    spawnFloatingText(x, y, text, color, life = 1) { 
+        this.entities.texts.push({x, y, text, color, life, dy: -0.6, fade: 0.015}); 
+    }
 
     update() {
         if (this.state !== 'PLAYING') return;
@@ -480,6 +436,11 @@ class GameEngine {
         const spawnRate = Math.max(12, 50 - this.wave * 1.5);
         if (this.frame % spawnRate === 0) this.planSpawn();
         
+        if (this.frame % 1500 === 0) {
+            this.spawnFloatingText(this.canvas.width/2 - 60, 100, "swarm incoming", CONFIG.colors.enemy, 3);
+            for(let i=0; i<8; i++) setTimeout(() => this.planSpawn(), i * 120);
+        }
+
         for (let i = this.spawnIndicators.length - 1; i >= 0; i--) {
             const ind = this.spawnIndicators[i];
             if (--ind.timer <= 0) { this.spawnEnemy(ind.x, ind.y); this.spawnIndicators.splice(i, 1); }
@@ -494,91 +455,44 @@ class GameEngine {
 
         p.update(this);
 
-        for (let b of this.entities.bullets) {
-            if (!b.active) continue;
+        for (let i = this.entities.bullets.length - 1; i >= 0; i--) {
+            const b = this.entities.bullets[i];
             b.x += b.vx; b.y += b.vy; b.life--;
-            if (b.life <= 0) b.active = false;
+            if (b.life <= 0) this.entities.bullets.splice(i, 1);
         }
 
-        for (let b of this.entities.enemyBullets) {
-            if (!b.active) continue;
+        for (let i = this.entities.enemyBullets.length - 1; i >= 0; i--) {
+            const b = this.entities.enemyBullets[i];
             b.x += b.vx; b.y += b.vy; b.life--;
             if (p.katana && Math.hypot(p.x - b.x, p.y - b.y) < p.katanaRange) {
-                b.vx *= -1.2; b.vy *= -1.2; 
-                this.spawnBullet(this.entities.bullets, b.x, b.y, b.vx, b.vy, b.damage, b.life, b.r);
-                b.active = false; 
-                continue;
+                b.vx *= -1.2; b.vy *= -1.2; this.entities.bullets.push(b); this.entities.enemyBullets.splice(i, 1); continue;
             }
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.r + b.r) { 
                 if (!p.bulletImmune && p.phaseTimer <= 0) p.takeDamage(b.damage, this); 
-                b.active = false; 
+                this.entities.enemyBullets.splice(i, 1); 
             }
-            else if (b.life <= 0) b.active = false;
+            else if (b.life <= 0) this.entities.enemyBullets.splice(i, 1);
         }
 
         for (let i = this.entities.enemies.length - 1; i >= 0; i--) {
             const e = this.entities.enemies[i];
             e.update(this, p);
-
-            // --- COLLISION PHYSICS (Player and Enemy) ---
-            const dx = e.x - p.x;
-            const dy = e.y - p.y;
-            const dist = Math.hypot(dx, dy);
-            const minDist = e.r + p.r;
-
-            if (dist < minDist) {
-                // Determine collision depth
-                const overlap = minDist - dist;
-                // Normalize direction
-                const nx = dx / (dist || 1);
-                const ny = dy / (dist || 1);
-
-                // Push enemy out of player hit box
-                // Player is "immovable" by enemies in this context
-                e.x += nx * overlap;
-                e.y += ny * overlap;
-
-                // Trigger damage
-                p.takeDamage(e.damage, this); 
-                if (p.thorns) e.hp -= p.thorns;
-            }
-
-            // Hollow Mark Bleed Tick
-            if (e.hollowMarked) {
-                if (this.frame % 30 === 0) {
-                    const bleed = e.maxHp * 0.025;
-                    e.hp -= bleed;
-                    e.hollowMarkTicks--;
-                    if (e.hollowMarkTicks <= 0) e.hollowMarked = false;
-                }
-            }
-
-            // Sanguine Aura logic
-            if (p.vampAuraRange && this.frame % 30 === 0) {
-                if (Math.hypot(p.x - e.x, p.y - e.y) < p.vampAuraRange) {
-                    e.hp -= p.vampAuraPower; p.hp = Math.min(p.maxHp, p.hp + p.vampAuraPower);
-                }
-            }
-            
-            for (let b of this.entities.bullets) {
-                if (!b.active) continue;
+            for (let j = this.entities.bullets.length - 1; j >= 0; j--) {
+                const b = this.entities.bullets[j];
                 if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + b.r) {
-                    const finalDmg = b.damage * (p.hp >= p.maxHp ? (1 + (p.vitalOverflow || 0) * 0.1) : 1);
-                    e.hp -= finalDmg;
-                    
-                    if (p.hollowMark && !e.hollowMarked) {
-                        e.hollowMarked = true;
-                        e.hollowMarkTicks = 10;
-                    }
-
-                    if (p.lifesteal) p.hp = Math.min(p.maxHp, p.hp + (finalDmg * p.lifesteal));
-                    b.active = false;
+                    e.hp -= b.damage;
+                    if (p.pullChance && Math.random() < p.pullChance) { e.x += (b.vx*0.2); e.y += (b.vy*0.2); }
+                    this.entities.bullets.splice(j, 1); break;
                 }
             }
-
+            if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) { 
+                p.takeDamage(e.damage, this); 
+                if (p.thorns) e.hp -= p.thorns; 
+            }
             if (e.hp <= 0) {
                 const xpVal = e.isBoss ? 500 : 15;
                 p.gainXp(xpVal, this);
+                this.spawnFloatingText(e.x, e.y - 10, `+${xpVal}xp`, CONFIG.colors.xp);
                 if (e.isBoss) { this.bossActive = false; this.spawnAltar(true, e.x, e.y); if(this.wave === 30) this.gameOver(true); }
                 this.entities.enemies.splice(i, 1);
             }
@@ -595,23 +509,31 @@ class GameEngine {
     }
 
     draw() {
-        this.ctx.fillStyle = '#030303';
+        this.ctx.fillStyle = '#050505';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         if (this.state === 'MENU') return;
 
         for (const ind of this.spawnIndicators) {
             const progress = ind.timer / ind.max;
-            this.ctx.beginPath(); this.ctx.arc(ind.x, ind.y, 1 + (progress * 15), 0, Math.PI * 2);
-            this.ctx.strokeStyle = CONFIG.colors.indicator; this.ctx.stroke();
+            const size = 1 + (progress * 15);
+            this.ctx.beginPath(); 
+            this.ctx.arc(ind.x, ind.y, size, 0, Math.PI * 2);
+            this.ctx.strokeStyle = CONFIG.colors.indicator; 
+            this.ctx.lineWidth = 1.5; 
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.arc(ind.x, ind.y, 1.5, 0, Math.PI * 2);
+            this.ctx.fillStyle = CONFIG.colors.indicator;
+            this.ctx.fill();
         }
 
         const p = this.entities.player;
         if(p) {
-            if (p.vampAuraRange) {
-                this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.vampAuraRange, 0, Math.PI*2);
-                this.ctx.strokeStyle = 'rgba(153, 27, 27, 0.1)'; this.ctx.stroke();
+            if (p.katana) {
+                this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.katanaRange, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `rgba(34, 197, 94, 0.15)`; this.ctx.stroke();
             }
-            this.ctx.fillStyle = p.finalStand ? CONFIG.colors.ethereal : (p.archetype === 'vampiric' ? CONFIG.colors.vamp : CONFIG.colors.player);
+            this.ctx.fillStyle = p.finalStand ? CONFIG.colors.ethereal : CONFIG.colors.player;
             if (p.phaseTimer > 0) this.ctx.globalAlpha = 0.5;
             this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); this.ctx.fill();
             this.ctx.globalAlpha = 1;
@@ -625,33 +547,22 @@ class GameEngine {
         for (const e of this.entities.enemies) {
             this.ctx.fillStyle = e.isBoss ? CONFIG.colors.ethereal : CONFIG.colors.enemy;
             this.ctx.beginPath(); this.ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); this.ctx.fill();
-            if (e.hollowMarked) {
-                this.ctx.strokeStyle = CONFIG.colors.hollowMark;
-                this.ctx.lineWidth = 2;
-                this.ctx.beginPath(); this.ctx.arc(e.x, e.y, e.r + 4, 0, Math.PI*2); this.ctx.stroke();
-            }
         }
 
         this.ctx.fillStyle = CONFIG.colors.bullet;
-        for (const b of this.entities.bullets) if (b.active) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
-        
+        for (const b of this.entities.bullets) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
         this.ctx.fillStyle = '#facc15';
-        for (const b of this.entities.enemyBullets) if (b.active) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
+        for (const b of this.entities.enemyBullets) { this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); this.ctx.fill(); }
         
         for (const t of this.entities.texts) { 
-            this.ctx.font = '12px "Product Sans"'; this.ctx.fillStyle = t.color; this.ctx.globalAlpha = Math.min(1, t.life); 
+            this.ctx.font = '400 12px "Product Sans", sans-serif';
+            this.ctx.fillStyle = t.color; this.ctx.globalAlpha = Math.min(1, t.life); 
             this.ctx.fillText(t.text, t.x, t.y); 
         }
         this.ctx.globalAlpha = 1;
     }
     loop() { this.update(); this.draw(); requestAnimationFrame(this.loop); }
-    gameOver(win = false) { 
-        this.state = 'GAME_OVER'; 
-        document.getElementById('endStatus').innerText = win ? "ascended." : "exhausted."; 
-        document.getElementById('finalWave').innerText = this.wave;
-        document.getElementById('finalLvl').innerText = this.entities.player.level;
-        this.showScreen('gameOverScreen'); 
-    }
+    gameOver(win = false) { this.state = 'GAME_OVER'; document.getElementById('endStatus').innerText = win ? "victory." : "exhausted."; document.getElementById('finalWave').innerText = this.wave; document.getElementById('finalLvl').innerText = this.entities.player.level; this.showScreen('gameOverScreen'); }
 }
 
 class Player {
@@ -661,14 +572,11 @@ class Player {
         this.hp = 100; this.maxHp = 100; this.speed = CONFIG.basePlayerSpeed;
         this.damage = 10; this.defense = 0; this.regen = 0;
         this.fireRate = 20; this.fireTimer = 0; this.upgrades = {}; this.etherealUpgrades = new Set();
-        this.luck = type === 'angelic' ? 0 : 0;
+        this.luck = type === 'angelic' ? 0 : (type === 'demonic' ? -10 : 0);
         this.adrenalineTimer = 0; this.phaseTimer = 0; this.phaseTime = 0;
-        this.lifesteal = 0;
-
         if (type === 'angelic') { this.regen = 1.0; this.speed *= 1.125; }
         if (type === 'phantom') { this.damage *= 1.5; this.maxHp = 60; this.hp = 60; }
         if (type === 'demonic') { this.defense = 5; this.maxHp = 150; this.hp = 150; }
-        if (type === 'vampiric') { this.lifesteal = 0.15; this.maxHp = 150; this.hp = 150; this.damage *= 1.05; this.fireRate *= 0.98; }
     }
 
     update(game) {
@@ -680,15 +588,7 @@ class Player {
         if (game.device === 'pc') {
             if (game.keys['w']) dy = -1; if (game.keys['s']) dy = 1; if (game.keys['a']) dx = -1; if (game.keys['d']) dx = 1;
         } else { dx = game.joystick.vec.x; dy = game.joystick.vec.y; }
-        if(dx || dy) { 
-            const l = Math.hypot(dx, dy); 
-            this.x += (dx/l) * this.speed; 
-            this.y += (dy/l) * this.speed; 
-        }
-
-        // Keep player in bounds
-        this.x = Math.max(this.r, Math.min(game.canvas.width - this.r, this.x));
-        this.y = Math.max(this.r, Math.min(game.canvas.height - this.r, this.y));
+        if(dx || dy) { const l = Math.hypot(dx, dy); this.x += (dx/l) * this.speed; this.y += (dy/l) * this.speed; }
 
         if (this.regen > 0 && game.frame % 60 === 0) this.hp = Math.min(this.maxHp, this.hp + this.regen);
 
@@ -703,7 +603,7 @@ class Player {
             if (fire) {
                 this.fireTimer = (this.adrenalineTimer > 0) ? 4 : this.fireRate;
                 const a = Math.atan2(ty - this.y, tx - this.x);
-                game.spawnBullet(game.entities.bullets, this.x, this.y, Math.cos(a)*8, Math.sin(a)*8, this.damage, 70, 3);
+                game.entities.bullets.push({ x: this.x, y: this.y, vx: Math.cos(a)*8, vy: Math.sin(a)*8, damage: this.damage, life: 70, r: 3 });
             }
         }
     }
@@ -721,6 +621,9 @@ class Player {
     gainXp(amt, game) {
         if (this.voidReaper) this.damage *= 1.001;
         if (this.archetype === 'angelic') this.luck += 0.5;
+        if (this.adrenalineChance && Math.random() < this.adrenalineChance) {
+            this.adrenalineTimer += 120; 
+        }
         this.xp += amt;
         if (this.xp >= this.maxXp) {
             this.level++; this.xp = 0; this.maxXp *= 1.25;
@@ -733,34 +636,34 @@ class Player {
 class Neal {
     constructor(x, y, level) {
         this.x = x; this.y = y; this.r = 7 + level*0.2; this.hp = 20 + level * 5; 
-        this.maxHp = this.hp;
         this.damage = 6 + level; this.speed = CONFIG.baseEnemySpeed + (level * 0.04);
-        this.hollowMarked = false;
-        this.hollowMarkTicks = 0;
     }
     update(game, p) {
         const a = Math.atan2(p.y - this.y, p.x - this.x);
-        this.x += Math.cos(a) * this.speed; 
-        this.y += Math.sin(a) * this.speed;
+        this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed;
+    }
+}
+
+class Minion {
+    constructor(p, i) { this.a = (Math.PI*2/3)*i; this.d = 60; this.x = p.x; this.y = p.y; }
+    update(game, p) {
+        this.a += 0.05; this.x = p.x + Math.cos(this.a)*this.d; this.y = p.y + Math.sin(this.a)*this.d;
+        game.entities.enemies.forEach(e => { if(Math.hypot(e.x-this.x, e.y-this.y) < e.r+5) e.hp -= 0.5; });
     }
 }
 
 class Boss extends Neal {
     constructor(x, y, wave) {
         super(x, y, wave); this.isBoss = true; this.r = 35; this.hp = 600 * (wave/10);
-        this.maxHp = this.hp;
-        this.speed = CONFIG.baseEnemySpeed * 0.35; this.fireTimer = 80;
+        this.speed = CONFIG.baseEnemySpeed * 0.35;
+        this.fireTimer = 80;
     }
     update(game, p) {
-        // Boss update follows different logic than standard Neal
-        const a = Math.atan2(p.y - this.y, p.x - this.x);
-        this.x += Math.cos(a) * this.speed; 
-        this.y += Math.sin(a) * this.speed;
-
+        super.update(game, p);
         if (--this.fireTimer <= 0) {
             this.fireTimer = 100;
-            const fa = Math.atan2(p.y - this.y, p.x - this.x);
-            for(let i=-1; i<=1; i++) game.spawnBullet(game.entities.enemyBullets, this.x, this.y, Math.cos(fa+i*0.3)*4, Math.sin(fa+i*0.3)*4, 15, 250, 6);
+            const a = Math.atan2(p.y - this.y, p.x - this.x);
+            for(let i=-1; i<=1; i++) game.entities.enemyBullets.push({ x: this.x, y: this.y, vx: Math.cos(a+i*0.3)*4, vy: Math.sin(a+i*0.3)*4, damage: 15, life: 250, r: 6 });
         }
     }
 }
